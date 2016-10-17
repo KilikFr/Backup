@@ -1,0 +1,59 @@
+{
+  "time": {
+    "yearly": {
+      "day_of_week": "*",
+      "day": "1",
+      "month": "1",
+      "delay": "10 years"
+    },
+    "monthly": {
+      "day_of_week": "*",
+      "day": "1",
+      "month": "*",
+      "delay": "1 year"
+    },
+    "weekly": {
+      "day_of_week": "1",
+      "day": "*",
+      "month": "*",
+      "delay": "2 months"
+    },
+    "daily": {
+      "day_of_week": "*",
+      "day": "*",
+      "month": "*",
+      "delay": "10 days"
+    }
+  },
+  "repository": {
+    "path": "/home/backup"
+  },
+  "servers": {
+    "demo1": {
+      "snapshots": {
+        "snaphome": {
+          "volume": "home",
+          "size": "10G",
+          "auto_resize": true,
+          "mount": "/snapshots/snaphome"
+        },
+        "snapsql": {
+          "volume": "sql",
+          "size": "10G",
+          "auto_resize": true,
+          "mount": "/snapshots/snapsql"
+        }
+      },
+      "backups": {
+        "web": {
+          "type": "files",
+          "snapshot": "snaphome"
+        },
+        "sql": {
+          "type": "mysql",
+          "snapshot": "snapsql"
+        }
+      }
+    }
+  }
+}
