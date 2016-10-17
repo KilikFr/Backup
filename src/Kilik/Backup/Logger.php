@@ -10,7 +10,7 @@ class Logger
      */
     public function addMessage($level, $message)
     {
-        echo strtoupper($level).': '.$message.PHP_EOL;
+        echo date('Y-m-d H:i:s').' - '.strtoupper($level).': '.$message.PHP_EOL;
     }
 
     /**

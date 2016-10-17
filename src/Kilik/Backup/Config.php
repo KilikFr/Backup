@@ -16,9 +16,13 @@ class Config
      * @var array
      */
     private $defaultConfig = [
+        'bin' => [
+            'lvcreate' => '/sbin/lvcreate',
+        ],
         'repository' => [
             'path' => '/var/backup',
         ],
+        'servers' => [],
     ];
 
     /**
@@ -102,6 +106,16 @@ class Config
     }
 
     /**
+     * Get servers list
+     *
+     * @return array
+     */
+    public function getServers()
+    {
+        return $this->config['servers'];
+    }
+
+    /**
      * Check config
      *
      * @throws \Exception if problem occur
@@ -124,6 +138,48 @@ class Config
                 $this->logger->addNotice('current repository directory created');
             }
         }
+
+        // check history dir
+        if (!is_dir($this->getHistoryRepositoryPath())) {
+            $this->logger->addNotice(
+                'history repository directory \''.$this->getHistoryRepositoryPath().'\' not exists'
+            );
+            if (!mkdir($this->getHistoryRepositoryPath(), '0600', true)) {
+                $this->logger->addError('can\'t create history repository directory');
+            } else {
+                $this->logger->addNotice('history repository directory created');
+            }
+        }
     }
+
+    /**
+     * Get global rsync options
+     *
+     * @return string
+     */
+    public function getGlobalRsyncOptions()
+    {
+        if (isset($this->config['rsync']['options'])) {
+            return $this->config['rsync']['options'];
+        }
+
+        return '';
+    }
+
+    /**
+     * Get server rsync options
+     *
+     * @param array $serverConfig
+     * @return array
+     */
+    public function getServerRsyncOptions($serverConfig)
+    {
+        if (isset($serverConfig['rsync']['options'])) {
+            return $serverConfig['rsync']['options'];
+        }
+
+        return $this->getGlobalRsyncOptions();
+    }
+
 
 }

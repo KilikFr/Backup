@@ -28,8 +28,12 @@
   "repository": {
     "path": "/tmp/backup"
   },
+  "rsync": {
+    "options": "-rlogtpxW --delete-after --delete-excluded"
+  },
   "servers": {
     "demo1": {
+      "hostname": "demo1.example.com",
       "snapshots": {
         "snaphome": {
           "volume": "home",
@@ -47,7 +51,8 @@
       "backups": {
         "web": {
           "type": "files",
-          "snapshot": "snaphome"
+          "snapshot": "snaphome",
+          "path": "/web"
         },
         "sql": {
           "type": "mysql",
@@ -56,7 +61,8 @@
             "socket": "/var/run/mysqld/mysqld.sock",
             "stop_slave": true,
             "slave_start": true
-          }
+          },
+          "path": ""
         }
       }
     }
