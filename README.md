@@ -6,6 +6,6 @@ Project state: planning in progress
 Planned features:
 - templates configuration files
 - incremental backup
-- mysql and mysqld backup
+- mysqld and mysqld_multi backup
 - consistent snapshots (with lvm volumes)
 - logging
