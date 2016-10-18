@@ -8,7 +8,7 @@ class Config
 {
     use LoggerTrait;
 
-    private $defaultConfigFilename = "app/config/demo.json";
+    private $defaultConfigFilename = "/etc/kilik.backup.json";
 
     /**
      * Default configuration

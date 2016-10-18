@@ -12,3 +12,4 @@ Planned features:
 - mysqld and mysqld_multi backup
 - consistent snapshots (with lvm volumes)
 - logging
+- send results API
