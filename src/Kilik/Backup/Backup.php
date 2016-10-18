@@ -74,6 +74,9 @@ class Backup
      */
     public function backup($strServers, $strBackups)
     {
+        $this->logger->addInfo('backup start');
+        $startTime = microtime(true);
+
         // check config
         $this->config->checkConfig();
 
@@ -89,6 +92,9 @@ class Backup
                 $this->backupServer($serverName, $serverConfig, $strBackups);
             }
         }
+
+        $endTime = microtime(true);
+        $this->logger->addInfo('backup end ('.sprintf('%.1fs', $endTime - $startTime).')');
     }
 
     /**
@@ -101,6 +107,8 @@ class Backup
     public function backupServer($serverName, $serverConfig, $strBackups)
     {
         $this->logger->addInfo('backupServer '.$serverName.' start');
+        $startTime = microtime(true);
+
         $backupsNames = explode(',', $strBackups);
 
         if (isset($serverConfig['backups']) && is_array($serverConfig['backups'])) {
@@ -112,7 +120,9 @@ class Backup
                 }
             }
         }
-        $this->logger->addInfo('backupServer '.$serverName.' end');
+
+        $endTime = microtime(true);
+        $this->logger->addInfo('backupServer '.$serverName.' end ('.sprintf('%.1fs', $endTime - $startTime).')');
     }
 
     /**
@@ -126,6 +136,7 @@ class Backup
     public function backupServerBackup($serverName, $serverConfig, $backupName, $backupConfig)
     {
         $this->logger->addInfo('backup '.$serverName.'/'.$backupName.' start');
+        $startTime = microtime(true);
         // @todo: check if history directory not already exists, else, need --force to overwrite
 
         $currentRepository = $this->config->getCurrentRepositoryPath().'/'.$serverName.'/'.$backupName;
@@ -200,10 +211,12 @@ class Backup
         } else {
             $result = 0;
         }
-
         $this->logger->addDebug('returned '.$result);
 
-        $this->logger->addInfo('backup '.$serverName.'/'.$backupName.' end');
+        $endTime = microtime(true);
+        $this->logger->addInfo(
+            'backup '.$serverName.'/'.$backupName.' end ('.sprintf('%.1fs', $endTime - $startTime).')'
+        );
     }
 
     /**
@@ -227,5 +240,80 @@ class Backup
         //$this->logger->addDebug('rmdir('.$dir.')');
         return rmdir($dir);
     }
+
+    /**
+     * Remove old backups
+     *
+     * @throws \Exception
+     */
+    public function purge()
+    {
+        $this->logger->addInfo('purge start');
+        $startTime = microtime(true);
+
+        // check config
+        $this->config->checkConfig();
+
+        // @todo: find all backups
+        // @todo: for each backup, check if it should be removed or not
+
+        // for each server
+        foreach ($this->config->getServers() as $serverName => $serverConfig) {
+            $this->purgeServer($serverName, $serverConfig);
+        }
+
+        $endTime = microtime(true);
+        $this->logger->addInfo('purge end ('.sprintf('%.1fs', $endTime - $startTime).')');
+    }
+
+    /**
+     * Remove old backups of server
+     *
+     * @param string $serverName
+     * @param array $serverConfig
+     * @throws \Exception
+     */
+    public function purgeServer($serverName, $serverConfig)
+    {
+        $this->logger->addInfo('purge server '.$serverName.' start');
+        $startTime = microtime(true);
+
+        // check config
+        $this->config->checkConfig();
+
+        // @todo: find all backups
+        // @todo: for each backup, check if it should be removed or not
+
+        // for each server backup
+        foreach ($serverConfig['backups'] as $backupName => $backupConfig) {
+            $this->purgeServerBackup($serverName, $serverConfig, $backupName, $backupConfig);
+        }
+
+        $endTime = microtime(true);
+        $this->logger->addInfo('purge server '.$serverName.'  end ('.sprintf('%.1fs', $endTime - $startTime).')');
+    }
+
+    /**
+     * Remove old server backup
+     *
+     * @param string $serverName
+     * @param array $serverConfig
+     * @param string $backupName
+     * @param array $backupConfig
+     * @throws \Exception
+     */
+    public function purgeServerBackup($serverName, $serverConfig, $backupName, $backupConfig)
+    {
+        $this->logger->addInfo('purge server backup '.$serverName.'/'.$backupName.' start');
+        $startTime = microtime(true);
+
+        $this->logger->addError('feature is not available');
+
+        $endTime = microtime(true);
+        $this->logger->addInfo(
+            'purge server backup '.$serverName.'/'.$backupName.' end ('.sprintf('%.1fs', $endTime - $startTime).')'
+        );
+    }
+
 
 }

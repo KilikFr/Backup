@@ -46,65 +46,74 @@ class Command
     {
         global $argc, $argv;
 
-        $this->logger = new Logger();
-
-        $this->config = new Config();
-        $this->config->setLogger($this->getLogger());
-
-        $this->backup = new Backup();
-        $this->backup->setLogger($this->logger);
-        $this->backup->setConfig($this->config);
-
-        $configFilename = $this->config->getDefaultConfigFilename();
-        $cmd = null;
-        $servers = null;
-        $backups = 'all';
-
-        for ($i = 1; $i < $argc; $i++) {
-            switch ($argv[$i]) {
-                case '--config':
-                    $configFilename = $argv[++$i];
-                    break;
-                case '--help':
-                    if (!is_null($cmd)) {
-                        throw new \Exception('too many commands');
-                    }
-                    $cmd = self::CMD_DISPLAY_HELP;
-                    break;
-                case '--backup':
-                    if (!is_null($cmd)) {
-                        throw new \Exception('too many commands');
-                    }
-                    $cmd = self::CMD_BACKUP;
-                    if (isset($argv[$i + 1]) && $argv[$i + 1][0] != '-') {
-                        $servers = $argv[++$i];
-                    }
-                    if (isset($argv[$i + 1]) && $argv[$i + 1][0] != '-') {
-                        $backups = $argv[++$i];
-                    }
-                    break;
-                case '--check-config':
-                    if (!is_null($cmd)) {
-                        throw new \Exception('too many commands');
-                    }
-                    $cmd = self::CMD_CHECK_CONFIG;
-                    break;
-                case '--force':
-                    $this->backup->setForce(true);
-                    break;
-                case '--test':
-                case '--dry-run':
-                    $this->backup->setTest(true);
-                    break;
-            }
-        }
-
-        // default command: display help
-        if (is_null($cmd)) {
-            $cmd = self::CMD_DISPLAY_HELP;
-        }
-
         try {
+            $this->logger = new Logger();
+
+            $this->config = new Config();
+            $this->config->setLogger($this->getLogger());
+
+            $this->backup = new Backup();
+            $this->backup->setLogger($this->logger);
+            $this->backup->setConfig($this->config);
+
+            $configFilename = $this->config->getDefaultConfigFilename();
+            $cmd = null;
+            $servers = null;
+            $backups = 'all';
+
+            for ($i = 1; $i < $argc; $i++) {
+                switch ($argv[$i]) {
+                    case '--config':
+                        $configFilename = $argv[++$i];
+                        break;
+                    case '--help':
+                        if (!is_null($cmd)) {
+                            throw new \Exception('too many commands');
+                        }
+                        $cmd = self::CMD_DISPLAY_HELP;
+                        break;
+                    case '--backup':
+                        if (!is_null($cmd)) {
+                            throw new \Exception('too many commands');
+                        }
+                        $cmd = self::CMD_BACKUP;
+                        if (isset($argv[$i + 1]) && $argv[$i + 1][0] != '-') {
+                            $servers = $argv[++$i];
+                        }
+                        if (isset($argv[$i + 1]) && $argv[$i + 1][0] != '-') {
+                            $backups = $argv[++$i];
+                        }
+                        break;
+                    case '--check-config':
+                        if (!is_null($cmd)) {
+                            throw new \Exception('too many commands');
+                        }
+                        $cmd = self::CMD_CHECK_CONFIG;
+                        break;
+                    case '--purge':
+                        if (!is_null($cmd)) {
+                            throw new \Exception('too many commands');
+                        }
+                        $cmd = self::CMD_PURGE;
+                        break;
+                    case '--force':
+                        $this->backup->setForce(true);
+                        break;
+                    case '--test':
+                    case '--dry-run':
+                        $this->backup->setTest(true);
+                        break;
+                    default:
+                        throw new \Exception('unknown argument \''.$argv[$i].'\'');
+                        break;
+                }
+            }
+
+            // default command: display help
+            if (is_null($cmd)) {
+                $cmd = self::CMD_DISPLAY_HELP;
+            }
+
 
             switch ($cmd) {
                 case self::CMD_CHECK_CONFIG:
@@ -118,9 +127,15 @@ class Command
                     echo ' --backup [servers] [backups] launch backup of servers (ex: all) or (ex: srv1,srv2)'.PHP_EOL;
                     echo '                              for backups (ex: all - by default) or (ex: bk1,bk2)'.PHP_EOL;
                     echo ' --check-config               check configuration'.PHP_EOL;
+                    echo ' --purge                      remove old backups'.PHP_EOL;
                     echo 'options: '.PHP_EOL;
-                    echo ' --config [config-filename]   use custom config file (default: '.$this->config->getDefaultConfigFilename(
-                        ).')'.PHP_EOL;
+                    echo ' --test                       enable test (no copy, no delete)'.PHP_EOL;
+                    echo ' --config [config-filename]   use custom config file (default: '.
+                        $this->config->getDefaultConfigFilename().')'.PHP_EOL;
+                    break;
+                case self::CMD_PURGE:
+                    $this->config->loadFromFile($configFilename);
+                    $this->backup->purge();
                     break;
                 case self::CMD_BACKUP:
                     $this->config->loadFromFile($configFilename);
