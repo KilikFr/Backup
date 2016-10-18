@@ -132,7 +132,7 @@ class Config
             $this->logger->addNotice(
                 'current repository directory \''.$this->getCurrentRepositoryPath().'\' not exists'
             );
-            if (!mkdir($this->getCurrentRepositoryPath(), '0600', true)) {
+            if (!mkdir($this->getCurrentRepositoryPath(), 0700, true)) {
                 $this->logger->addError('can\'t create current repository directory');
             } else {
                 $this->logger->addNotice('current repository directory created');
@@ -144,7 +144,7 @@ class Config
             $this->logger->addNotice(
                 'history repository directory \''.$this->getHistoryRepositoryPath().'\' not exists'
             );
-            if (!mkdir($this->getHistoryRepositoryPath(), '0600', true)) {
+            if (!mkdir($this->getHistoryRepositoryPath(), 0700, true)) {
                 $this->logger->addError('can\'t create history repository directory');
             } else {
                 $this->logger->addNotice('history repository directory created');
@@ -166,19 +166,35 @@ class Config
         return '';
     }
 
+
     /**
      * Get server rsync options
      *
      * @param array $serverConfig
+     * @param array $backupConfig
      * @return array
      */
-    public function getServerRsyncOptions($serverConfig)
+    public function getBackupRsyncOptions($serverConfig, $backupConfig)
     {
+        if (isset($backupConfig['rsync']['options'])) {
+            return $backupConfig['rsync']['options'];
+        }
         if (isset($serverConfig['rsync']['options'])) {
-            return $serverConfig['rsync']['options'];
+            $serverOptions = $serverConfig['rsync']['options'];
+        } else {
+            $serverOptions = $this->getGlobalRsyncOptions();
         }
 
-        return $this->getGlobalRsyncOptions();
+
+        if (isset($serverConfig['rsync']['more_options'])) {
+            $serverOptions .= ' '.$serverConfig['rsync']['more_options'];
+        }
+        if (isset($backupConfig['rsync']['more_options'])) {
+            $serverOptions .= ' '.$backupConfig['rsync']['more_options'];
+        }
+
+        return $serverOptions;
+
     }
 
 

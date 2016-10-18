@@ -21,6 +21,13 @@ class Command
     private $test = false;
 
     /**
+     * force mode
+     *
+     * @var bool
+     */
+    private $force = false;
+
+    /**
      * Commands asked from command line
      */
     const CMD_DISPLAY_HELP = 'help';
@@ -61,6 +68,9 @@ class Command
                         throw new \Exception('too many commands');
                     }
                     $cmd = self::CMD_BACKUP;
+                    break;
+                case '--force':
+                    $this->force = true;
                     break;
                 case '--test':
                 case '--dry-run':
@@ -158,32 +168,101 @@ class Command
         // @todo: check if history directory not already exists, else, need --force to overwrite
 
         $currentRepository = $this->config->getCurrentRepositoryPath().'/'.$serverName.'/'.$backupName;
-        if (is_dir($currentRepository)) {
-            if (!mkdir($currentRepository, 0600, true)) {
+        if (!is_dir($currentRepository)) {
+            if (!mkdir($currentRepository, 0700, true)) {
                 $this->logger->addError('can\'t create \''.$currentRepository.'\'');
 
                 return;
             }
         }
 
-        // @todo: make real backup
+        $date = new \DateTime('now');
+
+        $historyBaseRepository = $this->config->getHistoryRepositoryPath().'/'.$date->format(
+                'Ymd'
+            ).'/'.$serverName;
+        $historyRepository = $historyBaseRepository.'/'.$backupName;
+
+        // if backup already exists
+        if (is_dir($historyRepository)) {
+            if ($this->force) {
+                $this->logger->addError(
+                    'history directory \''.$historyRepository.'\' already exists (force: removed)'
+                );
+                if (!$this->test) {
+                    $this->rmdir($historyRepository);
+                }
+            } else {
+                $this->logger->addError(
+                    'history directory \''.$historyRepository.'\' already exists (use --force or delete it before)'
+                );
+
+                return;
+            }
+        }
+
+        // if base directory not exists
+        if (!is_dir($historyBaseRepository)) {
+            // create the directory
+            if (!mkdir($historyBaseRepository, 0700, true)) {
+                $this->logger->addError('can\'t create \''.$historyBaseRepository.'\'');
+
+                return;
+            }
+        }
 
         // if snapshot is used
-        if ($backupConfig['snapshot']) {
+        if (isset($backupConfig['snapshot']) && $backupConfig['snapshot'] != '') {
             $remotePath = $serverConfig['snapshots'][$backupConfig['snapshot']]['mount'].$backupConfig['path'];
         } // else, without snapshot: absolute path
         else {
             $remotePath = $backupConfig['path'];
         }
 
-        $rsyncOptions = $this->config->getServerRsyncOptions($serverConfig);
-        if ($this->test) {
-            // @todo handle test mode
-        }
+        $rsyncOptions = $this->config->getBackupRsyncOptions($serverConfig, $backupConfig);
 
         // @todo work in progress rsync command line
-        $cmd = 'rsync '.$rsyncOptions.' root@'.$serverConfig['hostname'].$remotePath.'/* '.$currentRepository;
+        $cmd = 'rsync '.$rsyncOptions.' root@'.$serverConfig['hostname'].':'.$remotePath.'/* '.$currentRepository;
         $this->logger->addDebug($cmd);
+        if (!$this->test) {
+            system($cmd, $result);
+        } else {
+            $result = 0;
+        }
+        $this->logger->addDebug('returned '.$result);
+
+        // @todo after rsync success, create a hard copy
+        $cmd = 'cp -al '.$currentRepository.' '.$historyRepository;
+        $this->logger->addDebug($cmd);
+        if (!$this->test) {
+            system($cmd, $result);
+        } else {
+            $result = 0;
+        }
+
+        $this->logger->addDebug('returned '.$result);
+    }
+
+    /**
+     * Remove dir, recursively
+     *
+     * @param $dir
+     * @return bool
+     */
+    public function rmdir($dir)
+    {
+        $files = array_diff(scandir($dir), ['.', '..']);
+        foreach ($files as $file) {
+            if (is_dir($dir.'/'.$file)) {
+                $this->rmdir($dir.'/'.$file);
+            } else {
+                //$this->logger->addDebug('unlink('.$dir.'/'.$file.')');
+                unlink($dir.'/'.$file);
+            }
+        }
+
+        //$this->logger->addDebug('rmdir('.$dir.')');
+        return rmdir($dir);
     }
 
 }
