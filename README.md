@@ -38,3 +38,11 @@ Short documentation of .json configuration file:
 - time.servers.'servername'.backups.'backupname'.path: remote path to backup
 - time.servers.'servername'.backups.'backupname'.rsync.options: options to replace global or server options
 - time.servers.'servername'.backups.'backupname'.rsync.more_options: options to add to server or global rsync options
+
+Create the binary (phar.readonly should be Off): 
+php build.php
+
+Usage exemple (without executable, use php main.php instead):
+- backup all servers: ./backup.phar --config /etc/backup.json --backup all
+- purge old backups: ./backup.phar --config /etc/backup.json --purge
+- display help: ./backup.phar --help
