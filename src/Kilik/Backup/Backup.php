@@ -4,6 +4,7 @@ namespace Kilik\Backup;
 
 use Kilik\Backup\Traits\ConfigTrait;
 use Kilik\Backup\Traits\LoggerTrait;
+use Kilik\Backup\Config\TimeRule;
 
 class Backup
 {
@@ -194,7 +195,7 @@ class Backup
         $rsyncOptions = $this->config->getBackupRsyncOptions($serverConfig, $backupConfig);
 
         // @todo work in progress rsync command line
-        $cmd = 'rsync '.$rsyncOptions.' root@'.$serverConfig['hostname'].':'.$remotePath.'/* '.$currentRepository;
+        $cmd = $this->config->getBinRsync().' '.$rsyncOptions.' root@'.$serverConfig['hostname'].':'.$remotePath.'/* '.$currentRepository;
         $this->logger->addDebug($cmd);
         if (!$this->test) {
             system($cmd, $result);
@@ -227,18 +228,40 @@ class Backup
      */
     public function rmdir($dir)
     {
-        $files = array_diff(scandir($dir), ['.', '..']);
-        foreach ($files as $file) {
-            if (is_dir($dir.'/'.$file)) {
-                $this->rmdir($dir.'/'.$file);
-            } else {
-                //$this->logger->addDebug('unlink('.$dir.'/'.$file.')');
-                unlink($dir.'/'.$file);
+        $cmd=$this->config->getBinRm().' -rf '.$dir;
+        $this->logger->addDebug($cmd);
+        system($cmd);
+    }
+
+    /**
+     * Get the best rule
+     *
+     * @param TimeRule[] $rules
+     * @param \DateTime $date
+     * @return TimeRule the match rule (or null)
+     */
+    public function getBestRule($rules, \DateTime $date)
+    {
+        $minDate = clone $date;
+        $matchRule = null;
+
+        // test all time rules
+        foreach ($rules as $rule) {
+            // if rule match
+            if ($rule->dateMatch($date)) {
+                $delayDate = $rule->getDelayDate($date);
+                // if time expression is valid
+                if ($delayDate->getTimestamp() < ($date->getTimestamp() - (24 * 60 * 60))) {
+                    // if rule is older, get it
+                    if ($delayDate->getTimestamp() < $minDate->getTimestamp()) {
+                        $minDate = $delayDate;
+                        $matchRule = $rule;
+                    }
+                }
             }
         }
 
-        //$this->logger->addDebug('rmdir('.$dir.')');
-        return rmdir($dir);
+        return $matchRule;
     }
 
     /**
@@ -253,67 +276,51 @@ class Backup
 
         // check config
         $this->config->checkConfig();
+        $timeRules = $this->config->getTimeRules();
 
-        // @todo: find all backups
-        // @todo: for each backup, check if it should be removed or not
+        $historyPath = $this->config->getHistoryRepositoryPath();
+        $historyDirs = scandir($historyPath, true);
 
-        // for each server
-        foreach ($this->config->getServers() as $serverName => $serverConfig) {
-            $this->purgeServer($serverName, $serverConfig);
+        foreach ($historyDirs as $historyDir) {
+            // skip current and parent directories
+            if (in_array($historyDir, ['.', '..'])) {
+                continue;
+            }
+            // if is a directory
+            if (is_dir($historyPath.'/'.$historyDir)) {
+                // if directory is date formated
+                if (preg_match('|^[0-9]{8}$|', $historyDir)) {
+                    $historyDate = \DateTime::createFromFormat('!Ymd', $historyDir);
+                    // if is a good date
+                    if ($historyDate) {
+                        // check if backup should be kept
+                        $this->logger->addNotice('checking date '.$historyDate->format('Ymd'));
+
+                        $rule = $this->getBestRule($timeRules, $historyDate);
+
+                        if (is_null($rule)) {
+                            $this->logger->addError('no rule match');
+                        } else {
+                            $ruleDate = $rule->getDelayDate(new \DateTime('now'));
+                            $keep = ($ruleDate->getTimestamp() < $historyDate->getTimestamp());
+
+                            $this->logger->addNotice(
+                                'match rule: '.$rule->getName().' after '.$ruleDate->format(
+                                    'Y-m-d'
+                                ).': '.($keep ? 'keep' : 'remove')
+                            );
+
+                            if(!$keep) {
+                                $this->rmdir($historyPath.'/'.$historyDir);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         $endTime = microtime(true);
         $this->logger->addInfo('purge end ('.sprintf('%.1fs', $endTime - $startTime).')');
     }
-
-    /**
-     * Remove old backups of server
-     *
-     * @param string $serverName
-     * @param array $serverConfig
-     * @throws \Exception
-     */
-    public function purgeServer($serverName, $serverConfig)
-    {
-        $this->logger->addInfo('purge server '.$serverName.' start');
-        $startTime = microtime(true);
-
-        // check config
-        $this->config->checkConfig();
-
-        // @todo: find all backups
-        // @todo: for each backup, check if it should be removed or not
-
-        // for each server backup
-        foreach ($serverConfig['backups'] as $backupName => $backupConfig) {
-            $this->purgeServerBackup($serverName, $serverConfig, $backupName, $backupConfig);
-        }
-
-        $endTime = microtime(true);
-        $this->logger->addInfo('purge server '.$serverName.'  end ('.sprintf('%.1fs', $endTime - $startTime).')');
-    }
-
-    /**
-     * Remove old server backup
-     *
-     * @param string $serverName
-     * @param array $serverConfig
-     * @param string $backupName
-     * @param array $backupConfig
-     * @throws \Exception
-     */
-    public function purgeServerBackup($serverName, $serverConfig, $backupName, $backupConfig)
-    {
-        $this->logger->addInfo('purge server backup '.$serverName.'/'.$backupName.' start');
-        $startTime = microtime(true);
-
-        $this->logger->addError('feature is not available');
-
-        $endTime = microtime(true);
-        $this->logger->addInfo(
-            'purge server backup '.$serverName.'/'.$backupName.' end ('.sprintf('%.1fs', $endTime - $startTime).')'
-        );
-    }
-
 
 }

@@ -2,6 +2,7 @@
 
 namespace Kilik\Backup;
 
+use Kilik\Backup\Config\TimeRule;
 use Kilik\Backup\Traits\LoggerTrait;
 
 class Config
@@ -18,6 +19,8 @@ class Config
     private $defaultConfig = [
         'bin' => [
             'lvcreate' => '/sbin/lvcreate',
+            'rm' => '/bin/rm',
+            'rsync' => '/usr/bin/rsync',
         ],
         'repository' => [
             'path' => '/var/backup',
@@ -195,6 +198,42 @@ class Config
 
         return $serverOptions;
 
+    }
+
+    /**
+     * Get times rules
+     *
+     * @return TimeRule[]
+     */
+    public function getTimeRules()
+    {
+        $rules = [];
+
+        foreach ($this->config['time'] as $ruleName => $time) {
+            $rules[] = (new TimeRule())->setName($ruleName)->setFromArray($time);
+        }
+
+        return $rules;
+    }
+
+    /**
+     * Get bin rm
+     *
+     * @return string
+     */
+    public function getBinRm()
+    {
+        return $this->config['bin']['rm'];
+    }
+
+    /**
+     * Get bin rsync
+     *
+     * @return string
+     */
+    public function getBinRsync()
+    {
+        return $this->config['bin']['rsync'];
     }
 
 
