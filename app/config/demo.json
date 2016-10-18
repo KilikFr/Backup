@@ -52,7 +52,10 @@
         "web": {
           "type": "files",
           "snapshot": "snaphome",
-          "path": "/web"
+          "path": "/web",
+          "rsync": {
+            "more_options": "--exclude var/cache --exclude vendor --exclude app/cache"
+          }
         },
         "sql": {
           "type": "mysql",
