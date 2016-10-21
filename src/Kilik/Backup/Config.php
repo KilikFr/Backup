@@ -2,12 +2,17 @@
 
 namespace Kilik\Backup;
 
+use Kilik\Backup\Config\Repository;
+use Kilik\Backup\Config\Rsync;
+use Kilik\Backup\Config\Server;
 use Kilik\Backup\Config\TimeRule;
+use Kilik\Backup\Config\Traits\RsyncTrait;
 use Kilik\Backup\Traits\LoggerTrait;
 
 class Config
 {
     use LoggerTrait;
+    use RsyncTrait;
 
     private $defaultConfigFilename = "/etc/kilik.backup.json";
 
@@ -18,9 +23,13 @@ class Config
      */
     private $defaultConfig = [
         'bin' => [
+            'cp' => '/bin/cp',
             'lvcreate' => '/sbin/lvcreate',
+            'lvremove' => '/sbin/lvremove',
+            'mount' => '/bin/mount',
             'rm' => '/bin/rm',
             'rsync' => '/usr/bin/rsync',
+            'umount' => '/bin/umount',
         ],
         'rsync' => [
             'options' => '-rlogtpxW --delete-after --delete-excluded',
@@ -35,14 +44,79 @@ class Config
     ];
 
     /**
-     * User defined configuration
+     * Binaries
      *
      * @var array
      */
-    private $config;
+    private $bin;
 
     /**
-     * @param $configFilename
+     * Time rules
+     *
+     * @var TimeRule[]
+     */
+    private $timeRules;
+
+    /**
+     * Repository
+     *
+     * @var Repository
+     */
+    private $repository;
+
+    /**
+     * Servers
+     *
+     * @var Server[]
+     */
+    private $servers;
+
+    /**
+     * Constructor
+     */
+    public function __construct()
+    {
+        $this->repository = new Repository();
+        $this->timeRules = [];
+        $this->servers = [];
+        $this->rsync = new Rsync();
+    }
+
+    /**
+     * Get the default config filemane
+     *
+     * @return string
+     */
+    public function getDefaultConfigFilename()
+    {
+        return $this->defaultConfigFilename;
+    }
+
+    /**
+     * Get repository
+     *
+     * @return Repository
+     */
+    public function getRepository()
+    {
+        return $this->repository;
+    }
+
+    /**
+     * Get servers list
+     *
+     * @return Server[]
+     */
+    public function getServers()
+    {
+        return $this->servers;
+    }
+
+
+    /**
+     * Load config from a file
+     *
+     * @param string $configFilename
      * @throws \Exception
      */
     public function loadFromFile($configFilename)
@@ -60,68 +134,55 @@ class Config
         }
 
         // merge config and default config
-        $this->config = array_merge($this->defaultConfig, $config);
+        $fullConfig = array_merge($this->defaultConfig, $config);
+
+        // load from array
+        $this->loadFromArray($fullConfig);
     }
 
     /**
-     * Get the default config filemane
+     * Load config from array
      *
-     * @return string
+     * @param array $config
+     * @throws \Exception
      */
-    public function getDefaultConfigFilename()
+    public function loadFromArray($config)
     {
-        return $this->defaultConfigFilename;
-    }
-
-    /**
-     * Get repository path
-     *
-     * @return string
-     * @throws \Exception if repository path is not set
-     */
-    public function getRepositoryPath()
-    {
-        // check repository exists
-        if (!isset($this->config['repository']['path'])) {
-            throw new \Exception('repository path is not defined');
+        // load binaries
+        if (isset($config['bin']) && is_array($config['bin'])) {
+            $this->bin = $config['bin'];
         }
 
-        // check repository is not empty
-        if ($this->config['repository']['path'] == '') {
-            throw new \Exception('repository path is empty');
+        // load time rules
+        if (!isset($config['time']) || !is_array($config['time'])) {
+            throw new \Exception('no time rules');
         }
 
-        return $this->config['repository']['path'];
-    }
+        $this->timeRules = [];
 
-    /**
-     * Get current base path
-     *
-     * @return string
-     */
-    public function getCurrentRepositoryPath()
-    {
-        return $this->getRepositoryPath().'/current';
-    }
+        foreach ($config['time'] as $ruleName => $time) {
+            $this->timeRules[] = (new TimeRule())->setName($ruleName)->setFromArray($time);
+        }
 
-    /**
-     * get history base path
-     *
-     * @return string
-     */
-    public function getHistoryRepositoryPath()
-    {
-        return $this->getRepositoryPath().'/history';
-    }
+        // load repository
+        if (isset($config['repository']['path'])) {
+            $this->repository->setPath($config['repository']['path']);
+        }
 
-    /**
-     * Get servers list
-     *
-     * @return array
-     */
-    public function getServers()
-    {
-        return $this->config['servers'];
+        // load rsync config
+        if (isset($config['rsync'])) {
+            $this->rsync->setFromArray($config['rsync']);
+        }
+
+        // load servers configs
+        if (!isset($config['servers']) || !is_array($config['servers'])) {
+            throw new \Exception('no servers configurations');
+        }
+
+        foreach ($config['servers'] as $serverName => $serverConfig) {
+            $this->servers[] = (new Server())->setName($serverName)->setFromArray($serverConfig)->setConfig($this);
+        }
+
     }
 
     /**
@@ -132,16 +193,16 @@ class Config
     public function checkConfig()
     {
         // check is dir
-        if (!is_dir($this->getRepositoryPath())) {
-            throw new \Exception('repository path \''.$this->getRepositoryPath().'\' not exists');
+        if (!is_dir($this->repository->getPath())) {
+            throw new \Exception('repository path \''.$this->repository->getPath().'\' not exists');
         }
 
         // check current dir
-        if (!is_dir($this->getCurrentRepositoryPath())) {
+        if (!is_dir($this->repository->getCurrentPath())) {
             $this->logger->addNotice(
-                'current repository directory \''.$this->getCurrentRepositoryPath().'\' not exists'
+                'current repository directory \''.$this->repository->getCurrentPath().'\' not exists'
             );
-            if (!mkdir($this->getCurrentRepositoryPath(), 0700, true)) {
+            if (!mkdir($this->repository->getCurrentPath(), 0700, true)) {
                 $this->logger->addError('can\'t create current repository directory');
             } else {
                 $this->logger->addNotice('current repository directory created');
@@ -149,11 +210,11 @@ class Config
         }
 
         // check history dir
-        if (!is_dir($this->getHistoryRepositoryPath())) {
+        if (!is_dir($this->repository->getHistoryPath())) {
             $this->logger->addNotice(
-                'history repository directory \''.$this->getHistoryRepositoryPath().'\' not exists'
+                'history repository directory \''.$this->repository->getHistoryPath().'\' not exists'
             );
-            if (!mkdir($this->getHistoryRepositoryPath(), 0700, true)) {
+            if (!mkdir($this->repository->getHistoryPath(), 0700, true)) {
                 $this->logger->addError('can\'t create history repository directory');
             } else {
                 $this->logger->addNotice('history repository directory created');
@@ -161,37 +222,10 @@ class Config
         }
 
         // check servers config
-        foreach($this->config['servers'] as $server) {
-            $this->checkServerConfig($server);
+        foreach ($this->servers as $server) {
+            $server->checkConfig();
         }
     }
-
-    /**
-     * Check server config
-     *
-     * @param string $server
-     */
-    public function checkServerConfig($server)
-    {
-        // @todo
-        // check snapshots config
-        // check backups config
-    }
-
-    /**
-     * Get global rsync options
-     *
-     * @return string
-     */
-    public function getGlobalRsyncOptions()
-    {
-        if (isset($this->config['rsync']['options'])) {
-            return $this->config['rsync']['options'];
-        }
-
-        return '';
-    }
-
 
     /**
      * Get server rsync options
@@ -224,40 +258,20 @@ class Config
     }
 
     /**
-     * Get times rules
+     * Get bin path
      *
-     * @return TimeRule[]
+     * @param string $binary
+     *
+     * @return string
+     * @throws \Exception
      */
-    public function getTimeRules()
+    public function getBin($binary)
     {
-        $rules = [];
-
-        foreach ($this->config['time'] as $ruleName => $time) {
-            $rules[] = (new TimeRule())->setName($ruleName)->setFromArray($time);
+        if (!isset($this->bin[$binary])) {
+            throw new \Exception('binary '.$binary.' undefined');
         }
 
-        return $rules;
+        return $this->bin[$binary];
     }
-
-    /**
-     * Get bin rm
-     *
-     * @return string
-     */
-    public function getBinRm()
-    {
-        return $this->config['bin']['rm'];
-    }
-
-    /**
-     * Get bin rsync
-     *
-     * @return string
-     */
-    public function getBinRsync()
-    {
-        return $this->config['bin']['rsync'];
-    }
-
 
 }
