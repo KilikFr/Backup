@@ -2,17 +2,18 @@
 
 namespace Kilik\Backup\Config;
 
+use Kilik\Backup\Config\Traits\NameTrait;
+use Kilik\Backup\Traits\ConfigTrait;
 
+/**
+ * Time Rule configuration
+ */
 class TimeRule
 {
-    const ALL = '*';
+    use NameTrait;
+    use ConfigTrait;
 
-    /**
-     * Name
-     *
-     * @param string
-     */
-    private $name;
+    const ALL = '*';
 
     /**
      * Day of week
@@ -64,28 +65,6 @@ class TimeRule
      * @see http://php.net/manual/fr/datetime.formats.relative.php
      */
     private $delay = '100 years';
-
-    /**
-     * @param string $name
-     *
-     * @return static
-     */
-    public function setName($name)
-    {
-        $this->name = $name;
-
-        return $this;
-    }
-
-    /**
-     * Get rule name
-     *
-     * @return string
-     */
-    public function getName()
-    {
-        return $this->name;
-    }
 
     /**
      * @param array $array

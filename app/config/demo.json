@@ -29,29 +29,31 @@
     "path": "/tmp/backup"
   },
   "rsync": {
-    "options": "-rlogtpxW --delete-after --delete-excluded"
+    "options": "-rlogtpxW --delete-after --delete-excluded --exclude *.log"
   },
   "servers": {
     "demo1": {
       "hostname": "demo1.example.com",
       "snapshots": {
         "snaphome": {
+          "group": "/dev/vg",
           "volume": "home",
           "size": "10G",
           "auto_resize": true,
-          "mount": "/snapshots/snaphome"
+          "mount": "/snapshots/home"
         },
         "snapsql": {
+          "group": "/dev/vg",
           "volume": "sql",
           "size": "10G",
           "auto_resize": true,
-          "mount": "/snapshots/snapsql"
+          "mount": "/snapshots/sql"
         }
       },
       "backups": {
         "web": {
           "type": "files",
-          "snapshot": "snaphome",
+          "snapshots": "snaphome",
           "path": "/web",
           "rsync": {
             "more_options": "--exclude var/cache --exclude vendor --exclude app/cache"
@@ -59,7 +61,7 @@
         },
         "sql": {
           "type": "mysql",
-          "snapshot": "snapsql",
+          "snapshots": "snapsql",
           "mysql": {
             "socket": "/var/run/mysqld/mysqld.sock",
             "stop_slave": true,
