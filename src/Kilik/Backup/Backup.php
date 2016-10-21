@@ -75,7 +75,7 @@ class Backup
      */
     public function backup($strServers, $strBackups)
     {
-        $this->logger->addInfo('backup start');
+        $this->logger->addInfo('backup() start');
         $startTime = microtime(true);
 
         // check config
@@ -90,55 +90,175 @@ class Backup
         // for each server
         foreach ($this->config->getServers() as $serverName => $serverConfig) {
             if ($strServers == self::ALL || in_array($serverName, $serversNames)) {
-                $this->backupServer($serverName, $serverConfig, $strBackups);
+                $this->backupServer($serverName, $strBackups);
             }
         }
 
         $endTime = microtime(true);
-        $this->logger->addInfo('backup end ('.sprintf('%.1fs', $endTime - $startTime).')');
+        $this->logger->addInfo('backup() end ('.sprintf('%.1fs', $endTime - $startTime).')');
     }
 
     /**
      * make server backup
      *
      * @param string $serverName
-     * @param array $serverConfig
      * @param string $strBackups : backups to save (ex: bk1) (ex: bk1,bk2) (ex: all)
      */
-    public function backupServer($serverName, $serverConfig, $strBackups)
+    public function backupServer($serverName, $strBackups)
     {
-        $this->logger->addInfo('backupServer '.$serverName.' start');
+        $this->logger->addInfo('backupServer('.$serverName.') start');
         $startTime = microtime(true);
+
+        $serverConfig = $this->config->getServers()[$serverName];
 
         $backupsNames = explode(',', $strBackups);
 
+        $backupsTodo = [];
+        $snapshotsTodo = [];
+
+        // evaluate backup to do and snapshots to make
         if (isset($serverConfig['backups']) && is_array($serverConfig['backups'])) {
             foreach ($serverConfig['backups'] as $backupName => $backupConfig) {
                 if ($strBackups == self::ALL || in_array($backupName, $backupsNames)) {
-                    // @todo: create consistent snapshots
-
-                    $this->backupServerBackup($serverName, $serverConfig, $backupName, $backupConfig);
+                    $backupsTodo[] = $backupName;
+                    if (isset($backupConfig['snapshot'])) {
+                        $snapshot = $backupConfig['snapshot'];
+                        if (!in_array($snapshot, $snapshotsTodo) && isset($serverConfig['snapshots'][$snapshot])) {
+                            $snapshotsTodo[] = $snapshot;
+                        }
+                    }
                 }
             }
         }
 
+        // prepare snapshots before sync
+        if (count($snapshotsTodo) > 0) {
+            $this->logger->addNotice(count($snapshotsTodo).' snapshots to create');
+            foreach ($snapshotsTodo as $snapshotTodo) {
+                $this->createSnapshot($serverName, $snapshotTodo);
+            }
+        }
+
+        // foreach backup to do,
+        foreach ($backupsTodo as $backupTodo) {
+            $this->backupBackup($serverName, $backupTodo);
+        }
+
+        // remove snaphosts after sync
+        if (count($snapshotsTodo) > 0) {
+            $this->logger->addNotice(count($snapshotsTodo).' snapshots to remove');
+            foreach ($snapshotsTodo as $snapshotTodo) {
+                $this->removeSnapshot($serverName, $snapshotTodo);
+            }
+        }
+
         $endTime = microtime(true);
-        $this->logger->addInfo('backupServer '.$serverName.' end ('.sprintf('%.1fs', $endTime - $startTime).')');
+        $this->logger->addInfo('backupServer('.$serverName.') end ('.sprintf('%.1fs', $endTime - $startTime).')');
+    }
+
+    /**
+     * Create a snapshot
+     *
+     * @param string $server
+     * @param string $snapshot
+     */
+    public function createSnapshot($server, $snapshot)
+    {
+        $this->logger->addInfo('createSnapshot('.$server.','.$snapshot.') start');
+        $startTime = microtime(true);
+        $serverConfig = $this->config->getServers()[$server];
+        $snapshotConfig = $serverConfig['snapshots'][$snapshot];
+
+        $volume=$snapshotConfig['group'].'/'.$snapshotConfig['volume'];
+        $snapVolume=$snapshotConfig['group'].'/'.$snapshot;
+
+        // create the snapshot
+        $lvCmd = 'lvcreate --snapshot --name '.$snapshot.' --size 1G '.$volume;
+        $cmd = 'ssh root@'.$serverConfig['hostname'].' '.$lvCmd;
+        $this->logger->addDebug($cmd);
+        if (!$this->test) {
+            system($cmd, $result);
+        } else {
+            $result = 0;
+        }
+        $this->logger->addDebug('returned '.$result);
+
+        // mount the snapshot
+        // ex: mount /dev/vg/snaphome /snapshots/home
+        $mountCmd = 'mount '.$snapVolume.' '.$snapshotConfig['mount'];
+        $cmd = 'ssh root@'.$serverConfig['hostname'].' '.$mountCmd;
+        $this->logger->addDebug($cmd);
+        if (!$this->test) {
+            system($cmd, $result);
+        } else {
+            $result = 0;
+        }
+        $this->logger->addDebug('returned '.$result);
+
+        $endTime = microtime(true);
+        $this->logger->addInfo(
+            'createSnapshot('.$server.','.$snapshot.') end ('.sprintf('%.1fs', $endTime - $startTime).')'
+        );
+    }
+
+    /**
+     * Remove a snapshot
+     *
+     * @param string $server
+     * @param string $snapshot
+     */
+    public function removeSnapshot($server, $snapshot)
+    {
+        $this->logger->addInfo('removeSnapshot('.$server.','.$snapshot.') start');
+        $startTime = microtime(true);
+
+        $serverConfig = $this->config->getServers()[$server];
+        $snapshotConfig = $serverConfig['snapshots'][$snapshot];
+        $snapVolume=$snapshotConfig['group'].'/'.$snapshot;
+
+        // unmount the snapshot
+        // ex: umount /dev/vg/snaphome
+        $umountCmd = 'umount '.$snapVolume;
+        $cmd = 'ssh root@'.$serverConfig['hostname'].' '.$umountCmd;
+        $this->logger->addDebug($cmd);
+        if (!$this->test) {
+            system($cmd, $result);
+        } else {
+            $result = 0;
+        }
+        $this->logger->addDebug('returned '.$result);
+
+        // remove the snapshot
+        $lvCmd = 'lvremove -f '.$snapVolume;
+        $cmd = 'ssh root@'.$serverConfig['hostname'].' '.$lvCmd;
+        $this->logger->addDebug($cmd);
+        if (!$this->test) {
+            system($cmd, $result);
+        } else {
+            $result = 0;
+        }
+        $this->logger->addDebug('returned '.$result);
+
+
+        $endTime = microtime(true);
+        $this->logger->addInfo(
+            'removeSnapshot('.$server.','.$snapshot.') end ('.sprintf('%.1fs', $endTime - $startTime).')'
+        );
     }
 
     /**
      * make backup server backup
      *
      * @param string $serverName
-     * @param array $serverConfig
      * @param string $backupName
-     * @param array $backupConfig
      */
-    public function backupServerBackup($serverName, $serverConfig, $backupName, $backupConfig)
+    public function backupBackup($serverName, $backupName)
     {
-        $this->logger->addInfo('backup '.$serverName.'/'.$backupName.' start');
+        $this->logger->addInfo('backupBackup('.$serverName.','.$backupName.') start');
         $startTime = microtime(true);
-        // @todo: check if history directory not already exists, else, need --force to overwrite
+
+        $serverConfig = $this->config->getServers()[$serverName];
+        $backupConfig = $serverConfig['backups'][$backupName];
 
         $currentRepository = $this->config->getCurrentRepositoryPath().'/'.$serverName.'/'.$backupName;
         if (!is_dir($currentRepository)) {
@@ -195,7 +315,8 @@ class Backup
         $rsyncOptions = $this->config->getBackupRsyncOptions($serverConfig, $backupConfig);
 
         // @todo work in progress rsync command line
-        $cmd = $this->config->getBinRsync().' '.$rsyncOptions.' root@'.$serverConfig['hostname'].':'.$remotePath.'/* '.$currentRepository;
+        $cmd = $this->config->getBinRsync(
+            ).' '.$rsyncOptions.' root@'.$serverConfig['hostname'].':'.$remotePath.'/* '.$currentRepository;
         $this->logger->addDebug($cmd);
         if (!$this->test) {
             system($cmd, $result);
@@ -216,7 +337,7 @@ class Backup
 
         $endTime = microtime(true);
         $this->logger->addInfo(
-            'backup '.$serverName.'/'.$backupName.' end ('.sprintf('%.1fs', $endTime - $startTime).')'
+            'backupBackup('.$serverName.','.$backupName.') end ('.sprintf('%.1fs', $endTime - $startTime).')'
         );
     }
 
@@ -228,7 +349,7 @@ class Backup
      */
     public function rmdir($dir)
     {
-        $cmd=$this->config->getBinRm().' -rf '.$dir;
+        $cmd = $this->config->getBinRm().' -rf '.$dir;
         $this->logger->addDebug($cmd);
         system($cmd);
     }
@@ -310,7 +431,7 @@ class Backup
                                 ).': '.($keep ? 'keep' : 'remove')
                             );
 
-                            if(!$keep) {
+                            if (!$keep) {
                                 $this->rmdir($historyPath.'/'.$historyDir);
                             }
                         }

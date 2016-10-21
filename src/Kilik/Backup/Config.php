@@ -22,6 +22,12 @@ class Config
             'rm' => '/bin/rm',
             'rsync' => '/usr/bin/rsync',
         ],
+        'rsync' => [
+            'options' => '-rlogtpxW --delete-after --delete-excluded',
+        ],
+        'lvm' => [
+            'size' => '10G',
+        ],
         'repository' => [
             'path' => '/var/backup',
         ],
@@ -153,6 +159,23 @@ class Config
                 $this->logger->addNotice('history repository directory created');
             }
         }
+
+        // check servers config
+        foreach($this->config['servers'] as $server) {
+            $this->checkServerConfig($server);
+        }
+    }
+
+    /**
+     * Check server config
+     *
+     * @param string $server
+     */
+    public function checkServerConfig($server)
+    {
+        // @todo
+        // check snapshots config
+        // check backups config
     }
 
     /**
