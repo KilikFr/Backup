@@ -416,7 +416,7 @@ class Backup
         $this->config->checkConfig();
         $timeRules = $this->config->getTimeRules();
 
-        $historyPath = $this->config->getHistoryRepositoryPath();
+        $historyPath = $this->config->getRepository()->getHistoryPath();
         $historyDirs = scandir($historyPath, true);
 
         foreach ($historyDirs as $historyDir) {
@@ -449,7 +449,9 @@ class Backup
                             );
 
                             if (!$keep) {
-                                $this->rmdir($historyPath.'/'.$historyDir);
+                                if (!$this->test) {
+                                    $this->rmdir($historyPath.'/'.$historyDir);
+                                }
                             }
                         }
                     }

@@ -112,6 +112,16 @@ class Config
         return $this->servers;
     }
 
+    /**
+     * Get times rules
+     *
+     * @çeturn TimeRule[]
+     */
+    public function getTimeRules()
+    {
+        return $this->timeRules;
+    }
+
 
     /**
      * Load config from a file
