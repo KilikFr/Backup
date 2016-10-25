@@ -138,6 +138,8 @@ class Backup
         // load mysql config
         if (isset($array['mysql'])) {
             $this->mysql=(new Mysql())->setFromArray($array['mysql']);
+            // reverse injection
+            $this->mysql->setBackup($this);
         }
 
         if (isset($array['path'])) {

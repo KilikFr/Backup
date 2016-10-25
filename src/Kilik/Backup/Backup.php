@@ -2,6 +2,7 @@
 
 namespace Kilik\Backup;
 
+use Kilik\Backup\Config\Mysql;
 use Kilik\Backup\Config\Server;
 use Kilik\Backup\Config\Snapshot;
 use Kilik\Backup\Traits\ConfigTrait;
@@ -114,9 +115,13 @@ class Backup
         $backupsNames = explode(',', $strBackups);
 
         $backupsTodo = [];
+        /* @var $snapshotsTodo Snapshot[] */
         $snapshotsTodo = [];
+        /* @var $snapshotsCreated Snapshot[] */
         $snapshotsCreated = [];
         $snapshotsMissing = false;
+        /* @var $mysqlServers Mysql[] */
+        $mysqlServers = [];
 
         // evaluate backup to do and snapshots to make
         foreach ($server->getBackups() as $backup) {
@@ -128,10 +133,15 @@ class Backup
                     if (!isset($snapshotsTodo[$snapshot])) {
                         $snapshotsTodo[$snapshot] = $backup->getSnapshot();
                     }
-                }
-                // if this backup is a mysql server
-                if($backup->getType()==\Kilik\Backup\Config\Backup::TYPE_MYSQL) {
-
+                    // if this backup is a mysql server (only with LVM)
+                    if ($backup->getType() == \Kilik\Backup\Config\Backup::TYPE_MYSQL
+                        && !is_null($backup->getMysql())
+                    ) {
+                        if (!isset($mysqlServers[$snapshot])) {
+                            $mysqlServers[$snapshot] = [];
+                        }
+                        $mysqlServers[$snapshot][] = $backup->getMysql();
+                    }
                 }
             }
         }
@@ -141,7 +151,12 @@ class Backup
             $this->logger->addNotice(count($snapshotsTodo).' snapshots to create');
             foreach ($snapshotsTodo as $snapshotTodo) {
                 try {
-                    $this->createSnapshot($snapshotTodo);
+                    if (isset($mysqlServers[$snapshotTodo->getName()])) {
+                        $snapMysqls = $mysqlServers[$snapshotTodo->getName()];
+                    } else {
+                        $snapMysqls = [];
+                    }
+                    $this->createSnapshot($snapshotTodo, $snapMysqls);
                     $snapshotsCreated[] = $snapshotTodo;
                 } catch (\Exception $e) {
                     echo $e->getMessage();
@@ -178,13 +193,54 @@ class Backup
      * Create a snapshot
      *
      * @param Snapshot $snapshot
+     * @param Mysql $mysqls []
      * @throws \Exception
      */
-    public function createSnapshot(Snapshot $snapshot)
+    public function createSnapshot(Snapshot $snapshot, $mysqls = [])
     {
         $server = $snapshot->getServer();
         $this->logger->addInfo('createSnapshot('.$server.','.$snapshot.') start');
         $startTime = microtime(true);
+
+        // if we need to lock Mysql before
+        // @todo
+        $connections = [];
+        foreach ($mysqls as $mysql) {
+            $this->logger->addDebug('need to lock mysql '.$mysql);
+            $connection = new \mysqli(
+                $mysql->getHostname(),
+                $mysql->getUser(),
+                $mysql->getPassword(),
+                null,
+                $mysql->getPort(),
+                $mysql->getSocket()
+            );
+            if ($connection->connect_error) {
+                $this->logger->addError('error connecting to mysql '.$mysql);
+                // @todo: handle this error, and unlock already locked servers
+                break;
+            } else {
+                $connections[] = ['connection' => $connection, 'mysql' => $mysql];
+
+                $this->logger->addDebug('connected to mysql '.$mysql);
+
+                // lock tables
+                if (!$this->test) {
+                    if (!$connection->query('FLUSH TABLES FOR EXPORT')) {
+                        $this->logger->addError('error locking mysql '.$mysql.': '.$connection->error);
+                    } else {
+                        $this->logger->addDebug('tables locked on mysql '.$mysql);
+                        sleep(10);
+                        if (!$connection->query('FLUSH LOGS')) {
+                            $this->logger->addError('error flushing logs mysql '.$mysql);
+                        } else {
+                            $stmt = $connection->query('SHOW SLAVE STATUS;');
+                            var_dump($stmt->fetch_assoc());
+                        }
+                    }
+                }
+            }
+        }
 
         // create the snapshot
         $lvCmd = $this->config->getBin('lvcreate').' '.$snapshot->getCreateCmdLine();
@@ -199,6 +255,19 @@ class Backup
 
         if ($result != 0) {
             throw new \Exception('error creating snapshot '.$server.','.$snapshot);
+        }
+
+        // if we need to unlock Mysql
+        // @todo
+        /* @var $mysqls Mysql[] */
+        foreach ($connections as $connection) {
+            $this->logger->addDebug('need to unlock mysql '.$connection['mysql']);
+            if(!$connection['mysql']->query('UNLOCK TABLES')) {
+                $this->logger->addError('can\'t unlock tables on mysql '.$connection['mysql']);
+            }
+            else {
+                $this->logger->addDebug('tables unlocked on mysql '.$connection['mysql']);
+            }
         }
 
         // mount the snapshot

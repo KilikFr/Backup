@@ -2,6 +2,7 @@
 
 namespace Kilik\Backup\Config;
 
+use Kilik\Backup\Config\Traits\BackupTrait;
 use Kilik\Backup\Config\Traits\HostnameTrait;
 use Kilik\Backup\Config\Traits\LoginTrait;
 use Kilik\Backup\Config\Traits\NameTrait;
@@ -19,13 +20,14 @@ class Mysql
     use HostnameTrait;
     use UserTrait;
     use PasswordTrait;
+    use BackupTrait;
 
     /**
      * Port.
      *
      * @var int
      */
-    private $port;
+    private $port=3306;
 
     /**
      * Socket.
@@ -116,5 +118,19 @@ class Mysql
     public function checkConfig()
     {
         // @todo
+    }
+
+    /**
+     * String name
+     *
+     * @return string
+     */
+    public function __toString()
+    {
+        if ($this->socket) {
+            return $this->user.'@'.$this->socket;
+        }
+
+        return $this->user.'@'.$this->hostname.':'.$this->port;
     }
 }
