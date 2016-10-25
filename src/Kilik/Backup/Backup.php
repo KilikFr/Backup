@@ -122,11 +122,16 @@ class Backup
         foreach ($server->getBackups() as $backup) {
             if ($strBackups == self::ALL || in_array($backup->getName(), $backupsNames)) {
                 $backupsTodo[] = $backup;
+                // if this backup need a snapshot
                 if (!is_null($backup->getSnapshot())) {
                     $snapshot = $backup->getSnapshot()->getName();
                     if (!isset($snapshotsTodo[$snapshot])) {
                         $snapshotsTodo[$snapshot] = $backup->getSnapshot();
                     }
+                }
+                // if this backup is a mysql server
+                if($backup->getType()==\Kilik\Backup\Config\Backup::TYPE_MYSQL) {
+
                 }
             }
         }

@@ -2,6 +2,7 @@
 
 namespace Kilik\Backup\Config;
 
+use Kilik\Backup\Config\Traits\HostnameTrait;
 use Kilik\Backup\Config\Traits\NameTrait;
 use Kilik\Backup\Config\Traits\RsyncTrait;
 use Kilik\Backup\Traits\ConfigTrait;
@@ -14,13 +15,7 @@ class Server
     use NameTrait;
     use RsyncTrait;
     use ConfigTrait;
-
-    /**
-     * Hostname.
-     *
-     * @var string
-     */
-    private $hostname = "unknown_host";
+    use HostnameTrait;
 
     /**
      * Snapshots
@@ -43,29 +38,7 @@ class Server
     {
         $this->snapshots = [];
         $this->backups = [];
-        $this->rsync=new Rsync();
-    }
-
-    /**
-     * Set hostname
-     *
-     * @param string $hostname
-     *
-     * @return static
-     */
-    public function setHostname($hostname)
-    {
-        $this->hostname = $hostname;
-    }
-
-    /**
-     * Get hostname
-     *
-     * @return string
-     */
-    public function getHostname()
-    {
-        return $this->hostname;
+        $this->rsync = new Rsync();
     }
 
     /**

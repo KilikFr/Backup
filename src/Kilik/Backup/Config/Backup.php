@@ -18,6 +18,7 @@ class Backup
     use RsyncTrait;
 
     const TYPE_FILES = 'files';
+    const TYPE_MYSQL = 'mysql';
 
     /**
      * Type.
@@ -32,6 +33,13 @@ class Backup
      * @var Snapshot
      */
     private $snapshot;
+
+    /**
+     * Mysql config.
+     *
+     * @var Mysql
+     */
+    private $mysql;
 
     /**
      * Constructor
@@ -64,7 +72,7 @@ class Backup
     }
 
     /**
-     * Get snapshot
+     * Set snapshot
      *
      * @param Snapshot $snapshot
      *
@@ -88,6 +96,30 @@ class Backup
     }
 
     /**
+     * Set mysql
+     *
+     * @param Mysql $mysql
+     *
+     * @return static
+     */
+    public function setMysql(Mysql $mysql)
+    {
+        $this->mysql = $mysql;
+
+        return $this;
+    }
+
+    /**
+     * Get mysql
+     *
+     * @return Mysql
+     */
+    public function getMysql()
+    {
+        return $this->mysql;
+    }
+
+    /**
      * @param array $array
      *
      * @return static
@@ -101,6 +133,11 @@ class Backup
 
         if (isset($array['type'])) {
             $this->type = $array['type'];
+        }
+
+        // load mysql config
+        if (isset($array['mysql'])) {
+            $this->mysql=(new Mysql())->setFromArray($array['mysql']);
         }
 
         if (isset($array['path'])) {
