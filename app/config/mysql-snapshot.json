@@ -1,0 +1,63 @@
+{
+  "description": "will save myhostname.com:/var/lib/mysql into /backup/current/myhostname/mysql with a consistant backup, with a minimal downtime",
+  "time": {
+    "yearly": {
+      "day_of_week": "*",
+      "day": "1",
+      "month": "1",
+      "delay": "10 years"
+    },
+    "monthly": {
+      "day_of_week": "*",
+      "day": "1",
+      "month": "*",
+      "delay": "1 year"
+    },
+    "weekly": {
+      "day_of_week": "1",
+      "day": "*",
+      "month": "*",
+      "delay": "2 months"
+    },
+    "daily": {
+      "day_of_week": "*",
+      "day": "*",
+      "month": "*",
+      "delay": "10 days"
+    }
+  },
+  "repository": {
+    "path": "/backup"
+  },
+  "rsync": {
+    "options": "-rlogtpxW --delete-after --delete-excluded --exclude *.log"
+  },
+  "servers": {
+    "myhostname": {
+      "hostname": "myhostname.com",
+      "snapshots": {
+        "snapvar": {
+          "group": "/dev/vg",
+          "volume": "var",
+          "size": "10G",
+          "auto_resize": true,
+          "mount": "/snapshots/snapvar",
+          "exec_before_create": "/etc/init.d/mysql stop",
+          "exec_after_create": "/etc/init.d/mysql start",
+          "exec_after_create_failed": "/etc/init.d/mysql start",
+          "exec_before_remove": "",
+          "exec_after_remove": ""
+        }
+      },
+      "backups": {
+        "mysql": {
+          "type": "files",
+          "path": "/lib/mysql",
+          "rsync": {
+            "options": "-rlogtpxW --delete-after --delete-excluded"
+          }
+        }
+      }
+    }
+  }
+}

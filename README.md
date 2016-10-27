@@ -34,15 +34,16 @@ Short documentation of .json configuration file:
 - time.servers.'servername'.backups: array
 - time.servers.'servername'.backups.'backupname': config of backup (ex: www)
 - time.servers.'servername'.backups.'backupname'.type: not available
-- time.servers.'servername'.backups.'backupname'.snapshot: not available
+- time.servers.'servername'.backups.'backupname'.snapshot: config of snapshots (see app/config/*.json for examples)
 - time.servers.'servername'.backups.'backupname'.path: remote path to backup
 - time.servers.'servername'.backups.'backupname'.rsync.options: options to replace global or server options
 - time.servers.'servername'.backups.'backupname'.rsync.more_options: options to add to server or global rsync options
 
 Create the binary (phar.readonly should be Off): 
 php build.php
+sudo cp backup.phar /bin/backup.phar
 
 Usage exemple (without executable, use php main.php instead):
-- backup all servers: ./backup.phar --config /etc/backup.json --backup all
-- purge old backups: ./backup.phar --config /etc/backup.json --purge
-- display help: ./backup.phar --help
+- backup all servers: backup.phar --config /etc/backup.json --backup all
+- purge old backups: backup.phar --config /etc/backup.json --purge
+- display help: backup.phar --help
