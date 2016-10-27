@@ -114,7 +114,9 @@ class Backup
         $backupsNames = explode(',', $strBackups);
 
         $backupsTodo = [];
+        /* @var $snapshotsTodo Snapshot[] */
         $snapshotsTodo = [];
+        /* @var $snapshotsCreated Snapshot[] */
         $snapshotsCreated = [];
         $snapshotsMissing = false;
 
@@ -122,6 +124,7 @@ class Backup
         foreach ($server->getBackups() as $backup) {
             if ($strBackups == self::ALL || in_array($backup->getName(), $backupsNames)) {
                 $backupsTodo[] = $backup;
+                // if this backup need a snapshot
                 if (!is_null($backup->getSnapshot())) {
                     $snapshot = $backup->getSnapshot()->getName();
                     if (!isset($snapshotsTodo[$snapshot])) {
