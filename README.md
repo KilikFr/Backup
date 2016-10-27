@@ -1,19 +1,18 @@
 KilikBackup - Scripts suite to backup files and MySQL databases
 --
 
-Project state: planning in progress
+Project state: beta
 
 Working features:
 - backup files with rsync
+- create lvm (Logical Volume Manager) snapshots for consistent saves
 - purge automatically old backup (with simple maintain rules)
+- custom remote command lines (top stop/start services)
+- samples configuration files (in /app/config)
 
 Planned features:
-- templates configuration files
-- incremental backup
-- mysqld and mysqld_multi backup
-- consistent snapshots (with lvm volumes)
 - logging
-- send results API
+- send results via API
 
 Configuration sample:
 check app/config/demo.json.
