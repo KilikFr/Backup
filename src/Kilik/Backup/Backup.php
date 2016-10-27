@@ -170,6 +170,28 @@ class Backup
     }
 
     /**
+     * Execute remote command on a server
+     *
+     * @param Server $server
+     * @param string $cmd
+     *
+     * @return int command line returned value
+     */
+    public function execRemoteCmd(Server $server, $cmd)
+    {
+        $remoteCmd = $server->getRemoteCmd($cmd);
+        $this->logger->addDebug($remoteCmd);
+        if (!$this->test) {
+            system($remoteCmd, $result);
+        } else {
+            $result = 0;
+        }
+        $this->logger->addDebug('returned '.$result);
+
+        return $result;
+    }
+
+    /**
      * Create a snapshot
      *
      * @param Snapshot $snapshot
@@ -181,35 +203,38 @@ class Backup
         $this->logger->addInfo('createSnapshot('.$server.','.$snapshot.') start');
         $startTime = microtime(true);
 
-        // create the snapshot
-        $lvCmd = $this->config->getBin('lvcreate').' '.$snapshot->getCreateCmdLine();
-        $cmd = $server->getRemoteCmd($lvCmd);
-        $this->logger->addDebug($cmd);
-        if (!$this->test) {
-            system($cmd, $result);
-        } else {
-            $result = 0;
-        }
-        $this->logger->addDebug('returned '.$result);
+        try {
+            // exec before create ?
+            if ($snapshot->getExecBeforeCreate()) {
+                $this->execRemoteCmd($server, $snapshot->getExecBeforeCreate());
+            }
 
-        if ($result != 0) {
-            throw new \Exception('error creating snapshot '.$server.','.$snapshot);
-        }
+            // create the snapshot
+            $lvCmd = $this->config->getBin('lvcreate').' '.$snapshot->getCreateCmdLine();
+            $result = $this->execRemoteCmd($server, $lvCmd);
 
-        // mount the snapshot
-        // ex: mount /dev/vg/snaphome /snapshots/home
-        $mountCmd = $this->config->getBin('mount').' '.$snapshot->getMountCmdLine();
-        $cmd = $server->getRemoteCmd($mountCmd);
-        $this->logger->addDebug($cmd);
-        if (!$this->test) {
-            system($cmd, $result);
-        } else {
-            $result = 0;
-        }
-        $this->logger->addDebug('returned '.$result);
+            if ($result != 0) {
+                throw new \Exception('error creating snapshot '.$server.','.$snapshot);
+            }
 
-        if ($result != 0) {
-            throw new \Exception('error mounting snapshot '.$server.','.$snapshot);
+            // mount the snapshot
+            // ex: mount /dev/vg/snaphome /snapshots/home
+            $mountCmd = $this->config->getBin('mount').' '.$snapshot->getMountCmdLine();
+            $result = $this->execRemoteCmd($server, $mountCmd);
+
+            if ($result != 0) {
+                throw new \Exception('error mounting snapshot '.$server.','.$snapshot);
+            }
+
+            // exec after create ?
+            if ($snapshot->getExecAfterCreate()) {
+                $this->execRemoteCmd($server, $snapshot->getExecAfterCreate());
+            }
+        } catch (\Exception $e) {
+            if ($snapshot->getExecAfterCreateFailed()) {
+                $this->execRemoteCmd($server, $snapshot->getExecAfterCreateFailed());
+            }
+            throw $e;
         }
 
         $endTime = microtime(true);
@@ -230,28 +255,24 @@ class Backup
         $this->logger->addInfo('removeSnapshot('.$server.','.$snapshot.') start');
         $startTime = microtime(true);
 
+        // exec before remove ?
+        if ($snapshot->getExecBeforeRemove()) {
+            $this->execRemoteCmd($server, $snapshot->getExecBeforeRemove());
+        }
+
         // unmount the snapshot
         // ex: umount /dev/vg/snaphome
         $mountCmd = $this->config->getBin('umount').' '.$snapshot->getUmountCmdLine();
-        $cmd = $server->getRemoteCmd($mountCmd);
-        $this->logger->addDebug($cmd);
-        if (!$this->test) {
-            system($cmd, $result);
-        } else {
-            $result = 0;
-        }
-        $this->logger->addDebug('returned '.$result);
+        $result = $this->execRemoteCmd($server, $mountCmd);
 
         // remove the snapshot
         $lvCmd = $this->config->getBin('lvremove').' '.$snapshot->getRemoveCmdLine();
-        $cmd = $server->getRemoteCmd($lvCmd);
-        $this->logger->addDebug($cmd);
-        if (!$this->test) {
-            system($cmd, $result);
-        } else {
-            $result = 0;
+        $result = $this->execRemoteCmd($server, $lvCmd);
+
+        // exec after remove ?
+        if ($snapshot->getExecAfterRemove()) {
+            $this->execRemoteCmd($server, $snapshot->getExecAfterRemove());
         }
-        $this->logger->addDebug('returned '.$result);
 
         $endTime = microtime(true);
         $this->logger->addInfo(

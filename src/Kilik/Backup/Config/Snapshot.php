@@ -59,6 +59,14 @@ class Snapshot
     private $execAfterCreate;
 
     /**
+     * Command to execute after creating snapshot failure
+     *
+     * @var string
+     */
+
+    private $execAfterCreateFailed;
+
+    /**
      * Command to execute before removing snapshot
      *
      * @var string
@@ -104,6 +112,9 @@ class Snapshot
         if (isset($array['exec_after_create'])) {
             $this->execAfterCreate = $array['exec_after_create'];
         }
+        if (isset($array['exec_after_create_failed'])) {
+            $this->execAfterCreateFailed = $array['exec_after_create_failed'];
+        }
         if (isset($array['exec_before_remove'])) {
             $this->execBeforeRemove = $array['exec_before_remove'];
         }
@@ -122,6 +133,56 @@ class Snapshot
     public function getMount()
     {
         return $this->mount;
+    }
+
+    /**
+     * Get execBeforeCreate
+     *
+     * @return string
+     */
+    public function getExecBeforeCreate()
+    {
+        return $this->execBeforeCreate;
+    }
+
+    /**
+     * Get execAfterCreate
+     *
+     * @return string
+     */
+    public function getExecAfterCreate()
+    {
+        return $this->execAfterCreate;
+    }
+
+    /**
+     * Get execAfterCreateFailed
+     *
+     * @return string
+     */
+    public function getExecAfterCreateFailed()
+    {
+        return $this->execAfterCreateFailed;
+    }
+
+    /**
+     * Get execBeforeRemove
+     *
+     * @return string
+     */
+    public function getExecBeforeRemove()
+    {
+        return $this->execBeforeRemove;
+    }
+
+    /**
+     * Get execAfterRemove
+     *
+     * @return string
+     */
+    public function getExecAfterRemove()
+    {
+        return $this->execAfterRemove;
     }
 
     /**
@@ -180,7 +241,7 @@ class Snapshot
         if (is_null($this->size) || $this->size == '') {
             throw new \Exception('size is not defined in snapshot \''.$this->name.'\'');
         }
-        if (!preg_match('|[0-9]{1,}G|',$this->size)) {
+        if (!preg_match('|[0-9]{1,}G|', $this->size)) {
             throw new \Exception('size is not in good format \''.$this->name.'\', should be like \'10G\'');
         }
         if (is_null($this->mount) || $this->mount == '') {
