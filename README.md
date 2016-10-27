@@ -38,9 +38,13 @@ Short documentation of .json configuration file:
 - time.servers.'servername'.backups.'backupname'.rsync.options: options to replace global or server options
 - time.servers.'servername'.backups.'backupname'.rsync.more_options: options to add to server or global rsync options
 
-Create the binary (phar.readonly should be Off): 
-php build.php
-sudo cp backup.phar /bin/backup.phar
+Get this project and build binary (phar.readonly should be Off in your php.ini):
+- ``git clone https://github.com/KilikFr/Backup.git``
+- ``cd Backup``
+- ``php build.php``
+
+Or get the pre-build binary:
+- ``wget -O backup.phar "https://github.com/KilikFr/Backup/releases/download/0.1/backup.phar"``
 
 Usage exemple (without executable, use php main.php instead):
 - backup all servers: backup.phar --config /etc/backup.json --backup all
