@@ -43,7 +43,7 @@ class Server
     {
         $this->snapshots = [];
         $this->backups = [];
-        $this->rsync=new Rsync();
+        $this->rsync = new Rsync();
     }
 
     /**
@@ -136,7 +136,13 @@ class Server
      */
     public function checkConfig()
     {
-        // @todo
+        foreach ($this->snapshots as $snapshot) {
+            $snapshot->checkConfig();
+        }
+
+        foreach ($this->backups as $backup) {
+            $backup->checkConfig();
+        }
     }
 
     /**

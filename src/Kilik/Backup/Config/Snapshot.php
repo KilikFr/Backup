@@ -44,6 +44,35 @@ class Snapshot
     private $mount;
 
     /**
+     * Command to execute before creating snapshot
+     *
+     * @var string
+     */
+    private $execBeforeCreate;
+
+    /**
+     * Command to execute after creating snapshot
+     *
+     * @var string
+     */
+
+    private $execAfterCreate;
+
+    /**
+     * Command to execute before removing snapshot
+     *
+     * @var string
+     */
+    private $execBeforeRemove;
+
+    /**
+     * Command to execute after removing snapshot
+     *
+     * @var string
+     */
+    private $execAfterRemove;
+
+    /**
      * Constructor
      */
     public function __construct()
@@ -68,6 +97,18 @@ class Snapshot
         }
         if (isset($array['volume'])) {
             $this->volume = $array['volume'];
+        }
+        if (isset($array['exec_before_create'])) {
+            $this->execBeforeCreate = $array['exec_before_create'];
+        }
+        if (isset($array['exec_after_create'])) {
+            $this->execAfterCreate = $array['exec_after_create'];
+        }
+        if (isset($array['exec_before_remove'])) {
+            $this->execBeforeRemove = $array['exec_before_remove'];
+        }
+        if (isset($array['exec_after_remove'])) {
+            $this->execAfterRemove = $array['exec_after_remove'];
         }
 
         return $this;
@@ -130,7 +171,21 @@ class Snapshot
      */
     public function checkConfig()
     {
-        // @todo
+        if (is_null($this->group) || $this->group == '') {
+            throw new \Exception('group is not defined in snapshot \''.$this->name.'\'');
+        }
+        if (is_null($this->volume) || $this->volume == '') {
+            throw new \Exception('volume is not defined in snapshot \''.$this->name.'\'');
+        }
+        if (is_null($this->size) || $this->size == '') {
+            throw new \Exception('size is not defined in snapshot \''.$this->name.'\'');
+        }
+        if (!preg_match('|[0-9]{1,}G|',$this->size)) {
+            throw new \Exception('size is not in good format \''.$this->name.'\', should be like \'10G\'');
+        }
+        if (is_null($this->mount) || $this->mount == '') {
+            throw new \Exception('mount point (mount) is not defined in snapshot \''.$this->name.'\'');
+        }
     }
 
     /**
