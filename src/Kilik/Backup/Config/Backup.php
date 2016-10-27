@@ -64,7 +64,7 @@ class Backup
     }
 
     /**
-     * Get snapshot
+     * Set snapshot
      *
      * @param Snapshot $snapshot
      *
