@@ -41,7 +41,7 @@ class Server
         $this->rsync = new Rsync();
     }
 
-     /**
+    /**
      * Get backups
      *
      * @return Backup[]
