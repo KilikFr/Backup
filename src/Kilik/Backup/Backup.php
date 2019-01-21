@@ -348,7 +348,7 @@ class Backup
 
         $cmd = $this->config->getBin('rsync');
         $cmd .= ' '.$backup->getRsyncOptions();
-        $cmd .= ' root@'.$server->getHostname().':'.$remotePath.'/* '.$currentRepository;
+        $cmd .= ' root@'.$server->getHostname().':'.$remotePath.'/ '.$currentRepository;
 
         $cmdStartTime = microtime(true);
         $this->logger->addDebug($cmd);
