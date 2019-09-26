@@ -32,6 +32,11 @@ class Server
     private $backups;
 
     /**
+     * @var string
+     */
+    private $user = "root";
+
+    /**
      * Constructor
      */
     public function __construct()
@@ -66,6 +71,10 @@ class Server
         // load rsync config
         if (isset($array['rsync'])) {
             $this->rsync->setFromArray($array['rsync']);
+        }
+
+        if (isset($array['user'])) {
+            $this->user = $array['user'];
         }
 
         if (isset($array['snapshots']) && is_array($array['snapshots'])) {
@@ -139,6 +148,27 @@ class Server
         $cmd = 'ssh root@'.$this->getHostname().' '.$cmd;
 
         return $cmd;
+    }
+
+
+    /**
+     * @return string
+     */
+    public function getUser()
+    {
+        return $this->user;
+    }
+
+    /**
+     * @param string $user
+     *
+     * @return static
+     */
+    public function setUser($user)
+    {
+        $this->user = $user;
+
+        return $this;
     }
 
 }
