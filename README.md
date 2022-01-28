@@ -1,5 +1,4 @@
-KilikBackup - Scripts suite to backup files and MySQL databases
---
+# KilikBackup - Scripts suite to backup files and MySQL databases
 
 Project state: beta
 
@@ -15,7 +14,7 @@ Planned features:
 - send results via API
 
 Configuration sample:
-check app/config/demo.json.
+check doc/config/*.json.
 
 Short documentation of .json configuration file:
 - time: array for time rules
@@ -38,15 +37,56 @@ Short documentation of .json configuration file:
 - time.servers.'servername'.backups.'backupname'.rsync.options: options to replace global or server options
 - time.servers.'servername'.backups.'backupname'.rsync.more_options: options to add to server or global rsync options
 
-Get this project and build binary (phar.readonly should be Off in your php.ini):
-- ``git clone https://github.com/KilikFr/Backup.git``
-- ``cd Backup``
-- ``php build.php``
+## Install from binary
 
-Or get the pre-build binary:
-- ``wget -O backup.phar "https://github.com/KilikFr/Backup/releases/download/0.1/backup.phar"``
+```shell
+wget -O /usr/local/bin/backup.phar "https://github.com/KilikFr/Backup/releases/latest/download/backup.phar"
+chmod +x /usr/local/bin/backup.phar
+```
+
+## Or use docker image
+
+```shell
+mkdir backup
+wget -O backup/config.yml "https://github.com/KilikFr/Backup/releases/latest/download/doc/config/simple-backup.yml"
+# edit config
+nano backup/config.yml
+# then run
+docker run --rm -it --name kilik-backup -v $(pwd)/backup:/backup -v $HOME:/root kilik/backup backup
+
+cd kilik-backup
+wget -O docker-compose.yml "https://github.com/KilikFr/Backup/releases/latest/download/docker-compose.yml.dist"
+
+wget -O /usr/local/bin/backup.phar "https://github.com/KilikFr/Backup/releases/latest/download/backup.phar"
+chmod +x /usr/local/bin/backup.phar
+```
+
+## Work on this project
+
+### Work on sources
+
+```shell
+git clone https://github.com/KilikFr/Backup.git backup
+cd backup
+make pull
+make up
+```
+
+### Build the binary
+
+```shell
+make build-phar
+```
+
+Note: backup.phar need php 8.0 to run
+
+### Build the docker image
+
+```shell
+make build-docker
+```
 
 Usage exemple (without executable, use php main.php instead):
-- backup all servers: backup.phar --config /etc/backup.json --backup all
-- purge old backups: backup.phar --config /etc/backup.json --purge
+- backup all servers: backup.phar backup --config=/etc/backup.json all
+- purge old backups: backup.phar purge --config=/etc/backup.json
 - display help: backup.phar --help

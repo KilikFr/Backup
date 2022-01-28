@@ -1,0 +1,12 @@
+{
+  "main": "bin/console",
+  "directories": [
+    "config",
+    "src",
+    "vendor"
+  ],
+  "files": [
+    ".env.local.php"
+  ],
+  "output": "build/backup.phar"
+}
