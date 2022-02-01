@@ -80,9 +80,7 @@ build-phar:
 	docker-compose exec -e APP_ENV=prod -u www-data php composer dump-env prod
 	docker-compose exec -e APP_ENV=prod -u www-data php ./bin/console cache:clear
 	docker-compose exec -e APP_ENV=prod -u www-data php ./bin/console cache:warmup
-	docker run --rm $${TTY_DOCKER} --volume="$$(pwd):/app:delegated" ajardin/humbug-box info -vvv
-	docker run --rm $${TTY_DOCKER} --volume="$$(pwd):/app:delegated" ajardin/humbug-box validate -vvv
-	docker run --rm $${TTY_DOCKER} --volume="$$(pwd):/app:delegated" ajardin/humbug-box compile -vvv
+	docker run --rm ${TTY_DOCKER} --volume="$$(pwd):/app:delegated" ajardin/humbug-box compile -vvv
 	rm .env.local.php
 
 ## Build docker image

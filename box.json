@@ -1,7 +1,8 @@
 {
-  "main": "bin/console",
+  "main": "bin/backup",
   "directories": [
     "config",
+    "bin",
     "src",
     "vendor"
   ],

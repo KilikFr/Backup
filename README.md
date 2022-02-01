@@ -52,13 +52,7 @@ wget -O backup/config.yml "https://github.com/KilikFr/Backup/releases/latest/dow
 # edit config
 nano backup/config.yml
 # then run
-docker run --rm -it --name kilik-backup -v $(pwd)/backup:/backup -v $HOME:/root kilik/backup backup
-
-cd kilik-backup
-wget -O docker-compose.yml "https://github.com/KilikFr/Backup/releases/latest/download/docker-compose.yml.dist"
-
-wget -O /usr/local/bin/backup.phar "https://github.com/KilikFr/Backup/releases/latest/download/backup.phar"
-chmod +x /usr/local/bin/backup.phar
+docker run --rm -it --name kilik-backup -v $(pwd)/backup:/backup -v $HOME:/root kilik/backup backup all
 ```
 
 ## Work on this project
@@ -84,6 +78,12 @@ Note: backup.phar need php 8.0 to run
 
 ```shell
 make build-docker
+```
+
+to build and push on official registry:
+
+```shell
+make build
 ```
 
 Usage exemple (without executable, use php main.php instead):
