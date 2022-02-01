@@ -1,0 +1,13 @@
+{
+  "main": "bin/backup",
+  "directories": [
+    "config",
+    "bin",
+    "src",
+    "vendor"
+  ],
+  "files": [
+    ".env.local.php"
+  ],
+  "output": "build/backup.phar"
+}

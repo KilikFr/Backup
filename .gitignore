@@ -1,3 +1,18 @@
 /.idea
 /app/config/test/*
 /backup.phar
+/vendor
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+# build path
+/build
+# test file for developpers
+/backup.json
+/backup.yml

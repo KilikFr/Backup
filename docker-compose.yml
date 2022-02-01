@@ -1,0 +1,12 @@
+version: '3.5'
+
+services:
+
+  php:
+    image: kilik/php:8.0-bullseye-dev
+    env_file:
+      - .env
+    volumes:
+      - .:/var/www/html:${FS_MOUNT-consistent}
+      - ${HOME}:/var/www/home
+    hostname: kilik-backup

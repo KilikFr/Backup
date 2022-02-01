@@ -1,0 +1,37 @@
+description: will save myhostname.com:/var/www into /backup/current/myhostname/www
+  with a non consistant backup
+time:
+  yearly:
+    day_of_week: "*"
+    day: '1'
+    month: '1'
+    delay: 10 years
+  monthly:
+    day_of_week: "*"
+    day: '1'
+    month: "*"
+    delay: 1 year
+  weekly:
+    day_of_week: '1'
+    day: "*"
+    month: "*"
+    delay: 2 months
+  daily:
+    day_of_week: "*"
+    day: "*"
+    month: "*"
+    delay: 10 days
+repository:
+  path: "/backup"
+rsync:
+  options: "-rlogtpxW --delete-after --delete-excluded --exclude *.log"
+servers:
+  myhostname:
+    hostname: myhostname.com
+    user: root
+    backups:
+      www:
+        type: files
+        path: "/www"
+        rsync:
+          options: "-rlogtpxW --delete-after --delete-excluded"
