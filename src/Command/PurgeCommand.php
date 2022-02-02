@@ -35,8 +35,9 @@ class PurgeCommand extends Command
         $service=new BackupService();
 
         $configFile = $input->getOption('config');
-        $dryRun = $input->getOption('dry-run') | $input->getOption('test');
-
+        if($input->getOption('dry-run') | $input->getOption('test')) {
+            $service->setTest(true);
+        }
         $service->getConfig()->loadFromFile($configFile);
         $service->getConfig()->checkConfig();
         $service->purge();

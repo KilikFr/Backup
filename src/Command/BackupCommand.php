@@ -48,6 +48,15 @@ class BackupCommand extends Command
 
         $service->getConfig()->loadFromFile($configFile);
         $service->getConfig()->checkConfig();
+
+        if($input->getOption('dry-run') | $input->getOption('test')) {
+            $service->getLogger()->addInfo('dry-run enabled');
+            $service->setTest(true);
+        }
+        if($input->getOption('force')) {
+            $service->getLogger()->addInfo('force enabled');
+            $service->setForce(true);
+        }
         $service->backup($server, $backup);
 
         $io->success('Backup complete');
