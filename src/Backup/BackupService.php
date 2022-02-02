@@ -46,6 +46,8 @@ class BackupService
     public function setForce(bool $force): self
     {
         $this->force = $force;
+
+        return $this;
     }
 
     /**
